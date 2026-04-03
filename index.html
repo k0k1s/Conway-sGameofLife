@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>LIFE // SYSTEM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:        #000000;
+            --panel:     #987676;
+            --border:    #1a2a1a;
+            --glow:      #00ff88;
+            --glow2:     #00ccff;
+            --dead:      #0a120a;
+            --alive:     #00ff88;
+            --text:      #7aff9a;
+            --dim:       #ffffff;
+            --accent:    #ff3c6e;
+            --warn:      #ffcc00;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* Scanline overlay */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0,0.08) 2px,
+                rgba(0,0,0,0.08) 4px
+            );
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Vignette */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.7) 100%);
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        /* ── HEADER ── */
+        header {
+            width: 100%;
+            max-width: 1100px;
+            padding: 18px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 28px;
+            letter-spacing: 6px;
+            color: var(--glow);
+            text-shadow: 0 0 20px var(--glow), 0 0 60px rgba(0,255,136,0.3);
+            line-height: 1;
+        }
+        .logo span { color: var(--glow2); text-shadow: 0 0 20px var(--glow2); }
+
+        .tagline {
+            font-size: 10px;
+            color: var(--dim);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        /* ── LAYOUT ── */
+        .layout {
+            display: flex;
+            gap: 16px;
+            padding: 16px 24px 24px;
+            width: 100%;
+            max-width: 100%;
+            align-items: flex-start;
+        }
+
+        /* ── SIDE PANELS ── */
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 180px;
+        }
+
+        .panel-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 9px;
+            letter-spacing: 3px;
+            color: var(--glow2);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+
+        /* Stats */
+        .stat {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .stat-label {
+            font-size: 9px;
+            color: var(--dim);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .stat-value {
+            font-size: 22px;
+            color: var(--glow);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(0,255,136,0.5);
+            line-height: 1.1;
+        }
+        .stat-value.warn { color: var(--warn); text-shadow: 0 0 10px rgba(255,204,0,0.5); }
+        .stat-value.danger { color: var(--accent); text-shadow: 0 0 10px rgba(255,60,110,0.5); }
+
+        /* Mini bar */
+        .bar-wrap { display: flex; flex-direction: column; gap: 4px; }
+        .bar-track {
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--glow), var(--glow2));
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 6px var(--glow);
+        }
+
+        /* Buttons */
+        .btn {
+            background: transparent;
+            border: 1px solid var(--glow);
+            color: var(--glow);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 2px;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 2px;
+            text-transform: uppercase;
+            transition: all 0.15s;
+            width: 100%;
+            text-align: left;
+        }
+        .btn:hover {
+            background: rgba(0,255,136,0.12);
+            box-shadow: 0 0 12px rgba(0,255,136,0.3), inset 0 0 12px rgba(0,255,136,0.05);
+        }
+        .btn.active {
+            background: var(--glow);
+            color: var(--bg);
+            box-shadow: 0 0 20px var(--glow);
+        }
+        .btn.danger-btn {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .btn.danger-btn:hover {
+            background: rgba(255,60,110,0.12);
+            box-shadow: 0 0 12px rgba(255,60,110,0.3);
+        }
+        .btn-row {
+            display: flex;
+            gap: 6px;
+        }
+        .btn-row .btn { flex: 1; text-align: center; }
+
+        /* Pattern buttons */
+        .pattern-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 1px;
+            padding: 6px 10px;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.15s;
+            width: 100%;
+            text-align: left;
+        }
+        .pattern-btn:hover {
+            border-color: var(--glow2);
+            color: var(--glow2);
+            background: rgba(0,204,255,0.06);
+        }
+        .pattern-btn .p-name { display: block; font-size: 10px; }
+        .pattern-btn .p-desc { display: block; font-size: 8px; color: var(--dim); margin-top: 1px; letter-spacing: 1px; }
+
+        /* Speed slider */
+        .slider-wrap { display: flex; flex-direction: column; gap: 6px; }
+        .slider-wrap label { font-size: 9px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: var(--glow);
+            box-shadow: 0 0 8px var(--glow);
+            cursor: pointer;
+        }
+
+        /* ── CANVAS AREA ── */
+        .canvas-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Toolbar above canvas */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tool-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--dim);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 1px;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.15s;
+            text-transform: uppercase;
+        }
+        .tool-btn.selected {
+            border-color: var(--glow2);
+            color: var(--glow2);
+            background: rgba(0,204,255,0.08);
+        }
+        .tool-separator { flex: 1; }
+        .mode-indicator {
+            font-size: 9px;
+            color: var(--dim);
+            letter-spacing: 2px;
+        }
+
+        /* The actual game canvas */
+        canvas {
+            display: block;
+            cursor: crosshair;
+            border: 1px solid var(--border);
+            box-shadow:
+                0 0 0 1px rgba(0,255,136,0.05),
+                0 0 40px rgba(0,255,136,0.04),
+                inset 0 0 80px rgba(0,0,0,0.5);
+            image-rendering: pixelated;
+            background: var(--dead);
+        }
+        canvas.paused { border-color: rgba(255,204,0,0.3); }
+
+        /* Bottom status bar */
+        .statusbar {
+            display: flex;
+            gap: 20px;
+            font-size: 9px;
+            color: var(--dim);
+            letter-spacing: 2px;
+            padding: 4px 0;
+        }
+        .statusbar span { display: flex; align-items: center; gap: 5px; }
+        .status-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--glow);
+            box-shadow: 0 0 6px var(--glow);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        .status-dot.paused-dot {
+            background: var(--warn);
+            box-shadow: 0 0 6px var(--warn);
+            animation: none;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* History sparkline */
+        .sparkline { width: 100%; height: 36px; }
+
+        /* Rules section */
+        .rule-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            color: var(--dim);
+            letter-spacing: 1px;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(26,42,26,0.5);
+        }
+        .rule-row span:last-child { color: var(--text); }
+
+        /* Notification toast */
+        #toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,255,136,0.1);
+            border: 1px solid var(--glow);
+            color: var(--glow);
+            font-size: 11px;
+            letter-spacing: 2px;
+            padding: 10px 20px;
+            border-radius: 2px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 200;
+            text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(0,255,136,0.2);
+        }
+        #toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <div class="logo">LIFE<span>//</span>SYSTEM</div>
+        <div class="tagline">Conway's Game of Life · v2.0 · Rust/WASM</div>
+    </div>
+    <div class="tagline" style="text-align:right">
+        <div id="fps-display">-- FPS</div>
+        <div style="margin-top:4px">GENERATION <span id="gen-header" style="color:var(--glow)">0</span></div>
+    </div>
+</header>
+
+<div class="layout">
+
+    <!-- LEFT PANEL -->
+    <div class="panel" style="width:176px">
+        <div class="panel-title">// Stats</div>
+
+        <div class="stat">
+            <div class="stat-label">Generation</div>
+            <div class="stat-value" id="stat-gen">0</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Population</div>
+            <div class="stat-value" id="stat-pop">0</div>
+        </div>
+        <div class="bar-wrap">
+            <div class="stat-label">Density</div>
+            <div class="bar-track"><div class="bar-fill" id="density-bar" style="width:0%"></div></div>
+            <div style="font-size:9px;color:var(--dim)" id="density-pct">0.0%</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Δ Pop</div>
+            <div class="stat-value" id="stat-delta">—</div>
+        </div>
+
+        <div class="panel-title" style="margin-top:4px">// History</div>
+        <canvas class="sparkline" id="sparkline"></canvas>
+
+        <div class="panel-title" style="margin-top:4px">// Rules</div>
+        <div class="rule-row"><span>Birth</span><span>3 neighbours</span></div>
+        <div class="rule-row"><span>Survive</span><span>2 or 3</span></div>
+        <div class="rule-row"><span>Die</span><span>&lt;2 or &gt;3</span></div>
+        <div class="rule-row" style="border:none"><span>Wrap</span><span>Toroidal</span></div>
+    </div>
+
+    <!-- CANVAS AREA -->
+    <div class="canvas-wrap">
+        <div class="toolbar">
+            <button class="tool-btn selected" id="tool-draw" title="Draw cells">✏ DRAW</button>
+            <button class="tool-btn" id="tool-erase" title="Erase cells">✕ ERASE</button>
+            <button class="tool-btn" id="tool-move" title="Pan (reserved)">⊕ STAMP</button>
+            <div class="tool-separator"></div>
+            <div class="mode-indicator" id="coord-display">ROW 0 · COL 0</div>
+        </div>
+
+        <canvas id="game-canvas"></canvas>
+
+        <div class="statusbar">
+            <span><div class="status-dot" id="status-dot"></div><span id="status-text">RUNNING</span></span>
+            <span>GRID 80×52</span>
+            <span id="speed-label">SPEED ●●●○○</span>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel" style="width:180px">
+        <div class="panel-title">// Controls</div>
+
+        <button class="btn active" id="btn-play">▶ PLAY / PAUSE</button>
+        <button class="btn" id="btn-step">⊳ STEP</button>
+
+        <div class="slider-wrap">
+            <label>Speed</label>
+            <input type="range" id="speed-slider" min="1" max="5" value="3">
+        </div>
+
+        <div class="btn-row" style="margin-top:4px">
+            <button class="btn danger-btn" id="btn-clear">✕ CLEAR</button>
+            <button class="btn" id="btn-random">⚙ RAND</button>
+        </div>
+
+        <div class="panel-title" style="margin-top:6px">// Patterns</div>
+
+        <button class="pattern-btn" data-pattern="glider">
+            <span class="p-name">↗ Glider</span>
+            <span class="p-desc">Classic spaceship</span>
+        </button>
+        <button class="pattern-btn" data-pattern="lwss">
+            <span class="p-name">⇒ LWSS</span>
+            <span class="p-desc">Light spaceship</span>
+        </button>
+        <button class="pattern-btn" data-pattern="blinker">
+            <span class="p-name">↕ Blinker</span>
+            <span class="p-desc">Period-2 oscillator</span>
+        </button>
+        <button class="pattern-btn" data-pattern="pulsar">
+            <span class="p-name">◎ Pulsar</span>
+            <span class="p-desc">Period-3 oscillator</span>
+        </button>
+        <button class="pattern-btn" data-pattern="pentomino">
+            <span class="p-name">R R-Pentomino</span>
+            <span class="p-desc">Chaotic methuselah</span>
+        </button>
+        <button class="pattern-btn" data-pattern="gosper">
+            <span class="p-name">✦ Gosper Gun</span>
+            <span class="p-desc">Glider gun · period 30</span>
+        </button>
+        <button class="pattern-btn" data-pattern="diehard">
+            <span class="p-name">☠ Diehard</span>
+            <span class="p-desc">Dies at gen 130</span>
+        </button>
+
+        <div class="panel-title" style="margin-top:6px">// Presets</div>
+        <button class="pattern-btn" data-pattern="maze">
+            <span class="p-name">⊞ Dense Maze</span>
+            <span class="p-desc">High-density chaos</span>
+        </button>
+        <button class="pattern-btn" data-pattern="sparse">
+            <span class="p-name">∴ Sparse Field</span>
+            <span class="p-desc">Low-density start</span>
+        </button>
+    </div>
+
+</div>
+
+<div id="toast">Pattern Placed</div>
+
+<script type="module">
+    import init, { Universe } from './pkg/rust_life.js';
+
+    async function run() {
+        await init();
+
+        // ── CONFIG ──
+        const COLS = 80, ROWS = 52;
+        const CELL  = 12;           // px per cell
+        const W = COLS * CELL, H = ROWS * CELL;
+
+        const COLORS = {
+            dead:     '#080e08',
+            alive:    '#00ff88',
+            aliveDim: '#00cc66',
+            grid:     '#0d160d',
+            newborn:  '#aaffcc',
+            ghost:    '#003322',
+        };
+        const SPEED_MAP = [200, 100, 60, 30, 10]; // ms per tick
+
+        // ── STATE ──
+        const universe = Universe.new(COLS, ROWS);
+        let generation = 0;
+        let animationId = null;
+        let isRunning = true;
+        let speed = 3;          // 1-5
+        let tool  = 'draw';     // draw | erase | stamp
+        let stampPattern = null;
+        let lastPop = 0;
+        let popHistory = [];
+        const MAX_HIST = 60;
+
+        // ── FPS TRACKING ──
+        let fpsFrames = 0, fpsLast = performance.now();
+
+        // ── DOM REFS ──
+        const canvas    = document.getElementById('game-canvas');
+        const ctx       = canvas.getContext('2d');
+        const sparkEl   = document.getElementById('sparkline');
+        const sparkCtx  = sparkEl.getContext('2d');
+        const btnPlay   = document.getElementById('btn-play');
+        const btnStep   = document.getElementById('btn-step');
+        const btnClear  = document.getElementById('btn-clear');
+        const btnRandom = document.getElementById('btn-random');
+        const speedSlider = document.getElementById('speed-slider');
+        const toast     = document.getElementById('toast');
+        const statusDot = document.getElementById('status-dot');
+
+        // Size canvas
+        canvas.width  = W;
+        canvas.height = H;
+        canvas.style.width  = W + 'px';
+        canvas.style.height = H + 'px';
+        sparkEl.width  = 152;
+        sparkEl.height = 36;
+
+        // ── DRAW ──
+        function drawGrid() {
+            ctx.strokeStyle = COLORS.grid;
+            ctx.lineWidth = 0.5;
+            for (let c = 0; c <= COLS; c++) {
+                ctx.beginPath();
+                ctx.moveTo(c * CELL, 0);
+                ctx.lineTo(c * CELL, H);
+                ctx.stroke();
+            }
+            for (let r = 0; r <= ROWS; r++) {
+                ctx.beginPath();
+                ctx.moveTo(0, r * CELL);
+                ctx.lineTo(W, r * CELL);
+                ctx.stroke();
+            }
+        }
+
+        // Expose cells for JS reading
+        let prevCells = null;
+
+        function drawCells() {
+            const cells = universe.get_cells();
+            const total = COLS * ROWS;
+            let pop = 0;
+
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const idx = r * COLS + c;
+                    const alive = cells[idx] === 1;
+                    const wasAlive = prevCells ? prevCells[idx] === 1 : false;
+                    const x = c * CELL, y = r * CELL;
+
+                    if (alive) {
+                        pop++;
+                        // Newborn flash
+                        if (!wasAlive) {
+                            ctx.fillStyle = COLORS.newborn;
+                        } else {
+                            ctx.fillStyle = COLORS.alive;
+                        }
+                        ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+
+                        // Inner glow dot
+                        ctx.fillStyle = 'rgba(200,255,220,0.6)';
+                        ctx.fillRect(x + CELL/2 - 1, y + CELL/2 - 1, 2, 2);
+                    } else {
+                        ctx.fillStyle = COLORS.dead;
+                        ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+                    }
+                }
+            }
+
+            prevCells = cells.slice();
+            return { pop, total };
+        }
+
+        function render() {
+            ctx.fillStyle = COLORS.dead;
+            ctx.fillRect(0, 0, W, H);
+            drawGrid();
+            const { pop, total } = drawCells();
+
+            // Update stats
+            const delta = pop - lastPop;
+            document.getElementById('stat-gen').textContent = generation;
+            document.getElementById('gen-header').textContent = generation;
+            document.getElementById('stat-pop').textContent = pop;
+
+            const deltaEl = document.getElementById('stat-delta');
+            if (delta > 0) {
+                deltaEl.textContent = '+' + delta;
+                deltaEl.className = 'stat-value';
+                deltaEl.style.color = '#00ffaa';
+            } else if (delta < 0) {
+                deltaEl.textContent = delta;
+                deltaEl.className = 'stat-value danger';
+                deltaEl.style.color = '';
+            } else {
+                deltaEl.textContent = '—';
+                deltaEl.className = 'stat-value';
+                deltaEl.style.color = '';
+            }
+
+            const pct = (pop / total * 100);
+            document.getElementById('density-bar').style.width = pct + '%';
+            document.getElementById('density-pct').textContent = pct.toFixed(1) + '%';
+
+            lastPop = pop;
+
+            // Sparkline
+            popHistory.push(pop);
+            if (popHistory.length > MAX_HIST) popHistory.shift();
+            drawSparkline(total);
+        }
+
+        function drawSparkline(total) {
+            const sw = sparkEl.width, sh = sparkEl.height;
+            sparkCtx.clearRect(0, 0, sw, sh);
+            if (popHistory.length < 2) return;
+
+            const max = Math.max(...popHistory, 1);
+            const barW = sw / MAX_HIST;
+
+            sparkCtx.strokeStyle = 'rgba(0,255,136,0.6)';
+            sparkCtx.lineWidth = 1;
+            sparkCtx.beginPath();
+            popHistory.forEach((v, i) => {
+                const x = i * barW;
+                const y = sh - (v / max) * (sh - 2) - 1;
+                if (i === 0) sparkCtx.moveTo(x, y);
+                else sparkCtx.lineTo(x, y);
+            });
+            sparkCtx.stroke();
+
+            // Fill
+            sparkCtx.fillStyle = 'rgba(0,255,136,0.06)';
+            sparkCtx.beginPath();
+            popHistory.forEach((v, i) => {
+                const x = i * barW;
+                const y = sh - (v / max) * (sh - 2) - 1;
+                if (i === 0) { sparkCtx.moveTo(x, sh); sparkCtx.lineTo(x, y); }
+                else sparkCtx.lineTo(x, y);
+            });
+            sparkCtx.lineTo((popHistory.length - 1) * barW, sh);
+            sparkCtx.closePath();
+            sparkCtx.fill();
+        }
+
+        // ── GAME LOOP ──
+        function tick() {
+            universe.tick();
+            generation++;
+            render();
+
+            // FPS
+            fpsFrames++;
+            const now = performance.now();
+            if (now - fpsLast >= 1000) {
+                document.getElementById('fps-display').textContent = fpsFrames + ' FPS';
+                fpsFrames = 0;
+                fpsLast = now;
+            }
+        }
+
+        function loop() {
+            tick();
+            animationId = setTimeout(() => {
+                if (isRunning) requestAnimationFrame(loop);
+            }, SPEED_MAP[speed - 1]);
+        }
+
+        function play() {
+            isRunning = true;
+            btnPlay.textContent = '⏸ PLAY / PAUSE';
+            btnPlay.classList.add('active');
+            statusDot.classList.remove('paused-dot');
+            document.getElementById('status-text').textContent = 'RUNNING';
+            canvas.classList.remove('paused');
+            loop();
+        }
+
+        function pause() {
+            isRunning = false;
+            clearTimeout(animationId);
+            animationId = null;
+            btnPlay.textContent = '▶ PLAY / PAUSE';
+            btnPlay.classList.remove('active');
+            statusDot.classList.add('paused-dot');
+            document.getElementById('status-text').textContent = 'PAUSED';
+            canvas.classList.add('paused');
+        }
+
+        // ── PATTERNS ──
+        const PATTERNS = {
+            glider: [[0,1],[1,2],[2,0],[2,1],[2,2]],
+            lwss:   [[0,1],[0,2],[0,3],[0,4],[1,0],[1,4],[2,4],[3,0],[3,3]],
+            blinker:[[0,0],[0,1],[0,2]],
+            pulsar: [
+                [0,2],[0,3],[0,4],[0,8],[0,9],[0,10],
+                [2,0],[2,5],[2,7],[2,12],
+                [3,0],[3,5],[3,7],[3,12],
+                [4,0],[4,5],[4,7],[4,12],
+                [5,2],[5,3],[5,4],[5,8],[5,9],[5,10],
+                [7,2],[7,3],[7,4],[7,8],[7,9],[7,10],
+                [8,0],[8,5],[8,7],[8,12],
+                [9,0],[9,5],[9,7],[9,12],
+                [10,0],[10,5],[10,7],[10,12],
+                [12,2],[12,3],[12,4],[12,8],[12,9],[12,10],
+            ],
+            pentomino: [[0,1],[0,2],[1,0],[1,1],[2,1]],
+            gosper: [
+                [0,24],
+                [1,22],[1,24],
+                [2,12],[2,13],[2,20],[2,21],[2,34],[2,35],
+                [3,11],[3,15],[3,20],[3,21],[3,34],[3,35],
+                [4,0],[4,1],[4,10],[4,16],[4,20],[4,21],
+                [5,0],[5,1],[5,10],[5,14],[5,16],[5,17],[5,22],[5,24],
+                [6,10],[6,16],[6,24],
+                [7,11],[7,15],
+                [8,12],[8,13],
+            ],
+            diehard: [[0,6],[1,0],[1,1],[2,1],[2,5],[2,6],[2,7]],
+        };
+
+        function placePattern(pattern, centerRow, centerCol) {
+            const cells = PATTERNS[pattern];
+            if (!cells) return;
+            const rowOff = Math.floor(centerRow);
+            const colOff = Math.floor(centerCol);
+            cells.forEach(([dr, dc]) => {
+                const r = (rowOff + dr + ROWS) % ROWS;
+                const c = (colOff + dc + COLS) % COLS;
+                universe.set_cell(r, c, 1);
+            });
+            render();
+        }
+
+        function placePreset(name) {
+            if (name === 'maze') {
+                for (let r = 0; r < ROWS; r++)
+                    for (let c = 0; c < COLS; c++)
+                        if (Math.random() < 0.45) universe.set_cell(r, c, 1);
+            } else if (name === 'sparse') {
+                for (let r = 0; r < ROWS; r++)
+                    for (let c = 0; c < COLS; c++)
+                        if (Math.random() < 0.12) universe.set_cell(r, c, 1);
+            }
+            render();
+        }
+
+        // ── INTERACTIONS ──
+        let isMouseDown = false;
+        let lastCell = null;
+
+        function cellAt(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = COLS / rect.width;
+            const scaleY = ROWS / rect.height;
+            const col = Math.floor((e.clientX - rect.left) * scaleX);
+            const row = Math.floor((e.clientY - rect.top) * scaleY);
+            if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return null;
+            return { row, col };
+        }
+
+        function applyTool(cell) {
+            if (!cell) return;
+            const key = `${cell.row},${cell.col}`;
+            if (key === lastCell) return;
+            lastCell = key;
+
+            if (tool === 'draw')  universe.set_cell(cell.row, cell.col, 1);
+            if (tool === 'erase') universe.set_cell(cell.row, cell.col, 0);
+            if (tool === 'stamp' && stampPattern) {
+                placePattern(stampPattern, cell.row - 2, cell.col - 2);
+                return;
+            }
+            render();
+        }
+
+        canvas.addEventListener('mousedown', e => {
+            isMouseDown = true;
+            lastCell = null;
+            applyTool(cellAt(e));
+        });
+        canvas.addEventListener('mousemove', e => {
+            const cell = cellAt(e);
+            if (cell) document.getElementById('coord-display').textContent =
+                `ROW ${String(cell.row).padStart(2,'0')} · COL ${String(cell.col).padStart(2,'0')}`;
+            if (isMouseDown) applyTool(cell);
+        });
+        canvas.addEventListener('mouseup',    () => { isMouseDown = false; lastCell = null; });
+        canvas.addEventListener('mouseleave', () => { isMouseDown = false; });
+
+        // Tools
+        function setTool(t) {
+            tool = t;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('selected'));
+            document.getElementById('tool-' + t).classList.add('selected');
+        }
+        document.getElementById('tool-draw').addEventListener('click',  () => setTool('draw'));
+        document.getElementById('tool-erase').addEventListener('click', () => setTool('erase'));
+        document.getElementById('tool-move').addEventListener('click',  () => setTool('stamp'));
+
+        // Play/Pause
+        btnPlay.addEventListener('click', () => isRunning ? pause() : play());
+
+        // Step
+        btnStep.addEventListener('click', () => {
+            if (isRunning) pause();
+            tick();
+        });
+
+        // Clear
+        btnClear.addEventListener('click', () => {
+            universe.clear();
+            generation = 0;
+            popHistory = [];
+            lastPop = 0;
+            prevCells = null;
+            render();
+            showToast('GRID CLEARED');
+        });
+
+        // Random
+        btnRandom.addEventListener('click', () => {
+            universe.randomize(0.30);
+            render();
+            showToast('RANDOMIZED');
+        });
+
+        // Speed
+        speedSlider.addEventListener('input', () => {
+            speed = parseInt(speedSlider.value);
+            const dots = '●'.repeat(speed) + '○'.repeat(5 - speed);
+            document.getElementById('speed-label').textContent = 'SPEED ' + dots;
+        });
+
+        // Pattern buttons
+        document.querySelectorAll('.pattern-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const p = btn.dataset.pattern;
+                if (p === 'maze' || p === 'sparse') {
+                    placePreset(p);
+                } else {
+                    // Place at center
+                    const cr = Math.floor(ROWS / 2) - 6;
+                    const cc = Math.floor(COLS / 2) - 6;
+                    placePattern(p, cr, cc);
+                    // Also set stamp mode
+                    stampPattern = p;
+                    setTool('stamp');
+                }
+                showToast(btn.querySelector('.p-name').textContent.trim() + ' PLACED');
+            });
+        });
+
+        // Toast
+        let toastTimer;
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 1600);
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', e => {
+            if (e.target.tagName === 'INPUT') return;
+            switch(e.key) {
+                case ' ':       e.preventDefault(); isRunning ? pause() : play(); break;
+                case 'ArrowRight': if (!isRunning) tick(); break;
+                case 'c': case 'C': btnClear.click(); break;
+                case 'r': case 'R': btnRandom.click(); break;
+                case 'd': case 'D': setTool('draw'); break;
+                case 'e': case 'E': setTool('erase'); break;
+                case '1': speedSlider.value = 1; speedSlider.dispatchEvent(new Event('input')); break;
+                case '2': speedSlider.value = 2; speedSlider.dispatchEvent(new Event('input')); break;
+                case '3': speedSlider.value = 3; speedSlider.dispatchEvent(new Event('input')); break;
+                case '4': speedSlider.value = 4; speedSlider.dispatchEvent(new Event('input')); break;
+                case '5': speedSlider.value = 5; speedSlider.dispatchEvent(new Event('input')); break;
+            }
+        });
+
+        // Kick off
+        render();
+        play();
+    }
+
+    run();
+</script>
+</body>
+</html>
