@@ -2,19 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>LIFE // SYSTEM</title>
+    <title>CONWAY'S GAME OF LIFE // EXAMPLE</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg:        #000000;
-            --panel:     #987676;
-            --border:    #1a2a1a;
+            --panel:     #390000;
+            --border:    #890000;
             --glow:      #00ff88;
             --glow2:     #00ccff;
-            --dead:      #0a120a;
-            --alive:     #00ff88;
-            --text:      #7aff9a;
+            --dead:      #007500;
+            --alive:     #d0ff00;
+            --text:      #ffffff;
             --dim:       #ffffff;
             --accent:    #ff3c6e;
             --warn:      #ffcc00;
@@ -25,7 +26,7 @@
         body {
             background: var(--bg);
             color: var(--text);
-            font-family: 'Share Tech Mono', monospace;
+  font-family: "Open Sans", sans-serif;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -52,7 +53,6 @@
         /* Vignette */
         body::before {
             content: '';
-            position: fixed;
             inset: 0;
             background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.7) 100%);
             pointer-events: none;
@@ -62,7 +62,7 @@
         /* ── HEADER ── */
         header {
             width: 100%;
-            max-width: 1100px;
+            max-width: 100%;
             padding: 18px 24px 0;
             display: flex;
             justify-content: space-between;
@@ -72,7 +72,7 @@
         .logo {
             font-family: 'Orbitron', sans-serif;
             font-weight: 900;
-            font-size: 28px;
+            font-size: 32px;
             letter-spacing: 6px;
             color: var(--glow);
             text-shadow: 0 0 20px var(--glow), 0 0 60px rgba(0,255,136,0.3);
@@ -110,8 +110,8 @@
         }
 
         .panel-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 9px;
+  font-family: "Open Sans", sans-serif;
+            font-size: 12px;
             letter-spacing: 3px;
             color: var(--glow2);
             text-transform: uppercase;
@@ -163,7 +163,7 @@
             background: transparent;
             border: 1px solid var(--glow);
             color: var(--glow);
-            font-family: 'Share Tech Mono', monospace;
+  font-family: "Open Sans", sans-serif;
             font-size: 11px;
             letter-spacing: 2px;
             padding: 8px 12px;
@@ -202,7 +202,7 @@
             background: transparent;
             border: 1px solid var(--border);
             color: var(--text);
-            font-family: 'Share Tech Mono', monospace;
+  font-family: "Open Sans", sans-serif;
             font-size: 10px;
             letter-spacing: 1px;
             padding: 6px 10px;
@@ -258,7 +258,7 @@
             background: transparent;
             border: 1px solid var(--border);
             color: var(--dim);
-            font-family: 'Share Tech Mono', monospace;
+  font-family: "Open Sans", sans-serif;
             font-size: 10px;
             letter-spacing: 1px;
             padding: 5px 10px;
@@ -297,7 +297,7 @@
         .statusbar {
             display: flex;
             gap: 20px;
-            font-size: 9px;
+            font-size: 12px;
             color: var(--dim);
             letter-spacing: 2px;
             padding: 4px 0;
@@ -362,8 +362,8 @@
 
 <header>
     <div>
-        <div class="logo">LIFE<span>//</span>SYSTEM</div>
-        <div class="tagline">Conway's Game of Life · v2.0 · Rust/WASM</div>
+        <div class="logo">GAME OF LIFE<span>//</span>EXAMPLE</div>
+        <div class="tagline">Conway's Game of Life · Rust/WASM</div>
     </div>
     <div class="tagline" style="text-align:right">
         <div id="fps-display">-- FPS</div>
@@ -419,7 +419,7 @@
 
         <div class="statusbar">
             <span><div class="status-dot" id="status-dot"></div><span id="status-text">RUNNING</span></span>
-            <span>GRID 80×52</span>
+            <span>GRID 50×50</span>
             <span id="speed-label">SPEED ●●●○○</span>
         </div>
     </div>
@@ -494,8 +494,8 @@
         await init();
 
         // ── CONFIG ──
-        const COLS = 80, ROWS = 52;
-        const CELL  = 12;           // px per cell
+        const COLS = 50, ROWS = 50;
+        const CELL  = 15;           // px per cell
         const W = COLS * CELL, H = ROWS * CELL;
 
         const COLORS = {
